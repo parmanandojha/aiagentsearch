@@ -1,0 +1,472 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search History - Business Discovery</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <style>
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        .history-header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        .back-btn {
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .back-btn:hover {
+            background: #f0f0f0;
+        }
+        .search-item {
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .search-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .search-item-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+        .search-item-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .search-item-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .summary-card-small {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .summary-card-small h4 {
+            margin: 0 0 5px 0;
+            font-size: 0.8em;
+            color: #666;
+        }
+        .summary-card-small .value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .empty-history {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .empty-history h2 {
+            color: #999;
+            margin-bottom: 10px;
+        }
+        .history-filter-bar {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .history-filter-bar input,
+        .history-filter-bar select {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+        .history-filter-bar input {
+            flex: 1;
+            min-width: 150px;
+        }
+        .history-filter-bar select {
+            min-width: 150px;
+        }
+        .filter-reset-btn {
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .filter-reset-btn:hover {
+            background: #5a6268;
+        }
+        .filter-results-count {
+            margin-left: auto;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .search-item.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="history-header">
+            <div>
+                <h1>📚 Search History</h1>
+                <p style="margin: 5px 0 0 0; opacity: 0.9;">
+                    Total searches: <span id="total-count">{{ total_searches|default:0 }}</span> | 
+                    Showing: <span id="filtered-count">{{ total_searches|default:0 }}</span>
+                </p>
+            </div>
+            <a href="/" class="back-btn">← Back to Search</a>
+        </div>
+        <div id="rate-limit-countdown" class="rate-limit-countdown" style="display: none; margin: 15px 0; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; color: #856404; text-align: center; font-weight: bold;"></div>
+
+        {% if search_history %}
+            <div class="history-filter-bar">
+                <input type="text" id="filter-industry" placeholder="🔍 Filter by Industry..." oninput="filterHistory()">
+                <input type="text" id="filter-location" placeholder="📍 Filter by Location..." oninput="filterHistory()">
+                <input type="date" id="filter-date-from" placeholder="From Date" onchange="filterHistory()">
+                <input type="date" id="filter-date-to" placeholder="To Date" onchange="filterHistory()">
+                <select id="filter-results-count" onchange="filterHistory()">
+                    <option value="">All Results</option>
+                    <option value="0">No Results</option>
+                    <option value="1-10">1-10 Businesses</option>
+                    <option value="11-50">11-50 Businesses</option>
+                    <option value="51-100">51-100 Businesses</option>
+                    <option value="100+">100+ Businesses</option>
+                </select>
+                <button class="filter-reset-btn" onclick="resetFilters()">Clear Filters</button>
+                <span class="filter-results-count" id="results-count"></span>
+            </div>
+            {% for search in search_history %}
+                <div class="search-item" 
+                     data-industry="{{ search.industry|lower }}" 
+                     data-location="{{ search.location|lower }}"
+                     data-timestamp="{{ search.timestamp }}"
+                     data-total-businesses="{{ search.total_businesses }}">
+                    <div class="search-item-header">
+                        <div>
+                            <div class="search-item-title">{{ search.industry }} in {{ search.location }}</div>
+                            <div class="search-item-meta">
+                                Searched on <span class="timestamp">{{ search.timestamp }}</span> • Max Results: {{ search.max_results }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="search-item-summary">
+                        <div class="summary-card-small">
+                            <h4>Total Businesses</h4>
+                            <div class="value">{{ search.total_businesses }}</div>
+                        </div>
+                        <div class="summary-card-small">
+                            <h4>Poor Websites</h4>
+                            <div class="value">{{ search.summary.poor_websites_percentage|default:0 }}%</div>
+                        </div>
+                        <div class="summary-card-small">
+                            <h4>Industry</h4>
+                            <div class="value" style="font-size: 0.9em;">{{ search.industry }}</div>
+                        </div>
+                        <div class="summary-card-small">
+                            <h4>Location</h4>
+                            <div class="value" style="font-size: 0.9em;">{{ search.location }}</div>
+                        </div>
+                    </div>
+
+                    {% if search.results.businesses %}
+                        <div class="table-container" style="margin-top: 15px;">
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                                        <th>Business Name</th>
+                                        <th>Website</th>
+                                        <th>Location</th>
+                                        <th>Score</th>
+                                        <th>Opportunity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for business in search.results.businesses %}
+                                        <tr data-index="{{ forloop.counter0 }}">
+                                            <td class="business-name">{{ business.name }}</td>
+                                            <td>
+                                                {% if business.website %}
+                                                    <a href="{{ business.website }}" target="_blank" class="website-link">{{ business.website }}</a>
+                                                {% else %}
+                                                    <span style="color: #999;">Not available</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ business.location|default:"Unknown" }}</td>
+                                            <td>
+                                                <span class="score-badge 
+                                                    {% if business.website_score >= 7 %}score-high
+                                                    {% elif business.website_score >= 4 %}score-medium
+                                                    {% else %}score-low{% endif %}">
+                                                    {{ business.website_score }}/10
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="opportunity-badge 
+                                                    {% if business.opportunity_level == 'High Potential' %}opportunity-high
+                                                    {% elif business.opportunity_level == 'Digitally Mature' %}opportunity-mature
+                                                    {% else %}opportunity-redesign{% endif %}">
+                                                    {{ business.opportunity_level }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button class="expand-btn" onclick="toggleDetails({{ forloop.counter0 }}, '{{ search.timestamp }}')">
+                                                    View Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="details-row" data-index="{{ forloop.counter0 }}" data-search="{{ search.timestamp }}" style="display: none;">
+                                            <td colspan="6">
+                                                <div class="details-panel active">
+                                                    <div class="details-grid">
+                                                        <div class="detail-section">
+                                                            <h4>Contact Information</h4>
+                                                            <p><strong>Phone:</strong> {{ business.contact.phone|default:"Not found" }}</p>
+                                                            <p><strong>Email:</strong> {{ business.contact.email|default:"Not found" }}</p>
+                                                            {% if business.contact.contact_form %}
+                                                                <p><strong>Contact Form:</strong> <a href="{{ business.contact.contact_form }}" target="_blank">{{ business.contact.contact_form }}</a></p>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="detail-section">
+                                                            <h4>Social Media</h4>
+                                                            {% if business.socials.instagram or business.socials.facebook or business.socials.linkedin %}
+                                                                <div class="social-links">
+                                                                    {% if business.socials.instagram %}<a href="{{ business.socials.instagram }}" target="_blank" class="social-link">Instagram</a>{% endif %}
+                                                                    {% if business.socials.facebook %}<a href="{{ business.socials.facebook }}" target="_blank" class="social-link">Facebook</a>{% endif %}
+                                                                    {% if business.socials.linkedin %}<a href="{{ business.socials.linkedin }}" target="_blank" class="social-link">LinkedIn</a>{% endif %}
+                                                                </div>
+                                                            {% else %}
+                                                                <p style="color: #999;">No social media links found</p>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="detail-section">
+                                                            <h4>Tech Stack</h4>
+                                                            <p><strong>CMS:</strong> {{ business.tech_stack.cms|default:"Not detected" }}</p>
+                                                            <p><strong>Frontend:</strong> {{ business.tech_stack.frontend|default:"Not detected" }}</p>
+                                                            <p><strong>Analytics:</strong> {{ business.tech_stack.analytics|default:"None" }}</p>
+                                                        </div>
+                                                        <div class="detail-section">
+                                                            <h4>Issues Found</h4>
+                                                            {% if business.issues %}
+                                                                <ul class="issues-list">
+                                                                    {% for issue in business.issues %}
+                                                                        <li>{{ issue }}</li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            {% else %}
+                                                                <p style="color: #28a745;">✅ No major issues detected</p>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p style="color: #999; text-align: center; padding: 20px;">No businesses found in this search.</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-history">
+                <h2>No search history yet</h2>
+                <p>Your previous searches will appear here once you start searching.</p>
+                <a href="/" class="back-btn" style="margin-top: 20px;">Start a New Search</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="{% static 'js/main.js' %}"></script>
+    <script>
+        // Format timestamps on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const timestamps = document.querySelectorAll('.timestamp');
+            timestamps.forEach(function(el) {
+                try {
+                    const date = new Date(el.textContent);
+                    const formatted = date.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    el.textContent = formatted;
+                } catch (e) {
+                    // Keep original if parsing fails
+                }
+            });
+            // Initial filter count update
+            updateFilterCount();
+            
+            // Initialize rate limit countdown
+            if (typeof updateRateLimitCountdown === 'function') {
+                updateRateLimitCountdown();
+                setInterval(updateRateLimitCountdown, 1000);
+            }
+        });
+
+        // Filter history based on filter inputs
+        function filterHistory() {
+            const industryFilter = document.getElementById('filter-industry').value.toLowerCase().trim();
+            const locationFilter = document.getElementById('filter-location').value.toLowerCase().trim();
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+            const resultsCountFilter = document.getElementById('filter-results-count').value;
+            
+            const searchItems = document.querySelectorAll('.search-item');
+            let visibleCount = 0;
+            
+            searchItems.forEach(function(item) {
+                let show = true;
+                
+                // Industry filter
+                if (industryFilter && !item.dataset.industry.includes(industryFilter)) {
+                    show = false;
+                }
+                
+                // Location filter
+                if (locationFilter && !item.dataset.location.includes(locationFilter)) {
+                    show = false;
+                }
+                
+                // Date range filter
+                if (dateFrom || dateTo) {
+                    const searchDate = new Date(item.dataset.timestamp);
+                    const fromDate = dateFrom ? new Date(dateFrom) : null;
+                    const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+                    
+                    if (fromDate && searchDate < fromDate) {
+                        show = false;
+                    }
+                    if (toDate && searchDate > toDate) {
+                        show = false;
+                    }
+                }
+                
+                // Results count filter
+                if (resultsCountFilter) {
+                    const totalBusinesses = parseInt(item.getAttribute('data-total-businesses') || '0') || 0;
+                    
+                    switch(resultsCountFilter) {
+                        case '0':
+                            if (totalBusinesses !== 0) show = false;
+                            break;
+                        case '1-10':
+                            if (totalBusinesses < 1 || totalBusinesses > 10) show = false;
+                            break;
+                        case '11-50':
+                            if (totalBusinesses < 11 || totalBusinesses > 50) show = false;
+                            break;
+                        case '51-100':
+                            if (totalBusinesses < 51 || totalBusinesses > 100) show = false;
+                            break;
+                        case '100+':
+                            if (totalBusinesses <= 100) show = false;
+                            break;
+                    }
+                }
+                
+                // Show/hide item
+                if (show) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+            
+            updateFilterCount(visibleCount);
+        }
+        
+        // Update filter count display
+        function updateFilterCount(visibleCount) {
+            const totalCount = document.getElementById('total-count').textContent;
+            const filteredCount = visibleCount !== undefined ? visibleCount : document.querySelectorAll('.search-item:not(.hidden)').length;
+            
+            document.getElementById('filtered-count').textContent = filteredCount;
+            
+            const resultsCountEl = document.getElementById('results-count');
+            if (filteredCount == totalCount) {
+                resultsCountEl.textContent = '';
+            } else {
+                resultsCountEl.textContent = `Showing ${filteredCount} of ${totalCount}`;
+            }
+        }
+        
+        // Reset all filters
+        function resetFilters() {
+            document.getElementById('filter-industry').value = '';
+            document.getElementById('filter-location').value = '';
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+            document.getElementById('filter-results-count').value = '';
+            filterHistory();
+        }
+
+        // Override toggleDetails to work with history page (multiple searches)
+        function toggleDetails(index, searchTimestamp) {
+            // Find the button that was clicked
+            const button = event.target;
+            const mainRow = button.closest('tr');
+            if (!mainRow) return;
+            
+            // Find the search item container
+            const searchItem = mainRow.closest('.search-item');
+            if (!searchItem) return;
+            
+            // Find the corresponding details row within the same search item
+            const detailsRow = searchItem.querySelector(`tr.details-row[data-index="${index}"][data-search="${searchTimestamp}"]`);
+            if (!detailsRow) return;
+            
+            // Toggle visibility
+            if (detailsRow.style.display === 'none' || !detailsRow.style.display) {
+                detailsRow.style.display = 'table-row';
+                mainRow.classList.add('expanded');
+                button.textContent = 'Hide Details';
+            } else {
+                detailsRow.style.display = 'none';
+                mainRow.classList.remove('expanded');
+                button.textContent = 'View Details';
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+# Note: .env.example, .env.development, .env.production are safe to commit (templates only)
+
+# API Keys and secrets (never commit these!)
+*_api_key*
+*secret*
+*SECRET*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Output files
+*.json
+output/
+results/
+search_history.json
+results.json
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+
+# Cache
+cache/
+*.cache
+
+# Static files (collected)
+staticfiles/
+*.pyc
+__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Security and backups
+*.bak
+*.backup
+*.tmp
+
+

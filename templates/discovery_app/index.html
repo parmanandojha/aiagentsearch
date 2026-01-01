@@ -1,0 +1,100 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Discovery Results</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📊 Business Discovery Results</h1>
+                    <p id="summary-info">Ready to search</p>
+                </div>
+                <a href="/history/" style="padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background 0.3s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">
+                    📚 View History
+                </a>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div class="search-form-container">
+                <h2>🔍 New Search</h2>
+                <form id="search-form" onsubmit="runNewSearch(event)">
+                    {% csrf_token %}
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="industry-input">Industry</label>
+                            <input type="text" id="industry-input" placeholder="e.g., restaurants, coffee shops, dentists" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="location-input">Location</label>
+                            <input type="text" id="location-input" placeholder="e.g., New York, NY" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="max-results-input">Max Results</label>
+                            <input type="number" id="max-results-input" value="50" min="1" max="100" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="search-btn" id="search-btn">Run Search</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="search-status" class="search-status"></div>
+                <div id="rate-limit-countdown" class="rate-limit-countdown" style="display: none; margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; color: #856404; text-align: center; font-weight: bold;"></div>
+            </div>
+        </div>
+
+        <div class="summary" id="summary-section">
+            <div class="summary-grid" id="summary-cards"></div>
+        </div>
+
+        <div class="filter-bar">
+            <input type="text" id="search-input" placeholder="🔍 Search businesses..." oninput="filterTable()">
+            <select id="opportunity-filter" onchange="filterTable()">
+                <option value="">All Opportunities</option>
+                <option value="High Potential">High Potential</option>
+                <option value="Digitally Mature">Digitally Mature</option>
+                <option value="Needs Redesign">Needs Redesign</option>
+            </select>
+            <select id="score-filter" onchange="filterTable()">
+                <option value="">All Scores</option>
+                <option value="high">High (7+)</option>
+                <option value="medium">Medium (4-7)</option>
+                <option value="low">Low (&lt;4)</option>
+            </select>
+        </div>
+
+        <div class="table-container">
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>Business Name</th>
+                        <th>Website</th>
+                        <th>Location</th>
+                        <th>Score</th>
+                        <th>Opportunity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <h2>No data yet</h2>
+                            <p>Use the search form above to discover businesses</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>
+
